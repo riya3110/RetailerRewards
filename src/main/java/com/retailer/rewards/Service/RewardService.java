@@ -3,6 +3,8 @@ package com.retailer.rewards.Service;
 import java.util.HashMap;
 
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -13,18 +15,22 @@ import com.retailer.rewards.model.Transaction;
 public class RewardService {
 	
 	public Map<String, Map<String, Integer>> calculateRewards(Customer customer){
-		Map<String , Integer> monthlyPoints = new HashMap<>();
-		int totalPoints = 0;
-		
-		for(Transaction tx: customer.getTransactions()) {
-			String month = tx.getDate().getMonth().name();
-			int points = calculatePoints(tx.getAmount());
-			monthlyPoints.merge(month, points, Integer::sum);
-			totalPoints += points;
-		}
-		monthlyPoints.put("Total", totalPoints);
-		return Map.of(customer.getName(), monthlyPoints);
+		Map<String, Integer> monthlyPoints = customer.getTransactions().stream()
+			    .collect(Collectors.groupingBy(
+			        tx -> tx.getDate().getMonth().name(),
+			        Collectors.summingInt(tx -> calculatePoints(tx.getAmount()))
+			    ));
+
+			int totalPoints = monthlyPoints.values().stream()
+			    .mapToInt(Integer::intValue)
+			    .sum();
+
+			monthlyPoints.put("Total", totalPoints);
+
+			return Map.of(customer.getName(), monthlyPoints);
+
 	}
+	
 	
 	private int calculatePoints(double amount) {
 		int points = 0;
